@@ -15,7 +15,7 @@ the user should introduce its IBM Q Experience Token and be aware that for high 
 
 """ Imports from qiskit"""
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
-from qiskit import execute, IBMQ
+from qiskit import execute, IBMQ                                                                                                  
 from qiskit import BasicAer
 
 import sys
@@ -27,7 +27,7 @@ import fractions
 import numpy as np
 
 """ Function to check if N is of type q^p"""
-def check_if_power(N):
+def check_if_power(N):  # Nota_David: Ver si hay mejores funciones https://stackoverflow.com/questions/39190815/how-to-make-perfect-power-algorithm-more-efficient
     """ Check if N is a perfect power in O(n^3) time, n=ceil(logN) """
     b=2
     while (2**b) <= N:
@@ -56,7 +56,18 @@ def check_if_power(N):
 """ Function to get the value a ( 1<a<N ), such that a and N are coprime. Starts by getting the smallest a possible
     This normally is be done fully randomly, we just did like this for user (professor) to have complete control 
     over the a value that gets selected """
-def get_value_a(N):
+def get_value_a(N): 
+    '''
+    Nota_David: Esta me la voy a cargar. 
+    Simplemente que el usuario introduzca un "a" y dea error sí no es coprimo.
+    Puede hacerse una función que dea varios (o todos) los números coprimos de N.
+
+    Otra opción (mi favorita) es que por defecto se elija un valor 1<a<N al azar, 
+    se vea si es coprimo y si no lo es, buscar otro valor aleatorio y así hasta 
+    encontrar uno que valga.
+    Para hacer esto, que en la función un argumento sea "random_a = True". El 
+    usuario puede deshabilitar esta posibilidad cambiando esto.
+    '''
 
     """ ok defines if user wants to used the suggested a (if ok!='0') or not (if ok=='0') """
     ok='0'
@@ -109,7 +120,51 @@ def get_value_a(N):
 
 """ Function to apply the continued fractions to find r and the gcd to find the desired factors"""
 def get_factors(x_value,t_upper,N,a):
+    '''
+    Nota_David: t_upper = 2n, es decir, nº de qubits en el registro de conteo
 
+    Basicamente el resumen de la siguiente nota es que no veo ventajas a esta funcion y 
+    yo creo que es mucho mas rápido calcular directamente
+        frac = Fraction(x_over_T).limit_denominator(N)
+    y probar con den = frac.numerator().
+
+    '''    
+
+    '''
+    Nota_David: 
+    
+    Veamos que hace esta función:
+
+        x_over_T = 15/2^6 = 15/64 = 0 + 15/64 = 0 + 1/{64/15} = 0 + 1/{4 + 4/15} = 0 + 1/{ 4 + [1/(15/4)]} =
+                                   = 0 +  1/{ 4 + [1/( 3 + 3/4)]} = etc
+    
+    Esto es:
+    x_over_T  = 15/64 = 0 +      1
+                            -----------
+                             4 +   1
+                                -------
+                                3 +  3
+                                    --- 
+                                     4
+
+    (se seguiría aplicando el algoritmo)
+
+    Esta función calcula: 
+        frac = Fraction(0).limit_denominator()  
+        Pruba con den = frac.numerator(). 
+    
+    Si no funciona, calcula
+        frac =  Fraction(0 + 1/4).limit_denominator()
+    
+    Si no funciona, calcula
+        frac = Fraction(0 + 1/[4 + 1/3]).limit_denominator()
+        ....
+    
+
+    No le veo sentido a esta función, porque no calcular 
+        frac = Fraction(x_over_T).limit_denominator(N) ????
+
+    '''
     if x_value<=0:
         print('x_value is <= 0, there are no continued fractions\n')
         return False
@@ -117,7 +172,7 @@ def get_factors(x_value,t_upper,N,a):
     print('Running continued fractions for this case\n')
 
     """ Calculate T and x/T """
-    T = pow(2,t_upper)
+    T = pow(2,t_upper) # Nota_David: T = 2^{2n}
 
     x_over_T = x_value/T
 
@@ -129,8 +184,9 @@ def get_factors(x_value,t_upper,N,a):
     b = array.array('i')
     t = array.array('f')
 
-    b.append(math.floor(x_over_T))
-    t.append(x_over_T - b[i])
+    # Nota_David: añadimos a "b" la parte entera y a "t" la parte decimal
+    b.append(math.floor(x_over_T)) # Nota_David: rounds a number DOWN to the nearest integer, if necessary, and returns the result.
+    t.append(x_over_T - b[i])      
 
     while i>=0:
 
@@ -152,7 +208,7 @@ def get_factors(x_value,t_upper,N,a):
         aux = aux + b[0]
 
         """Get the denominator from the value obtained"""
-        frac = fractions.Fraction(aux).limit_denominator()
+        frac = fractions.Fraction(aux).limit_denominator() # Nota_David: Aquí meterle N en el limit_denominator
         den=frac.denominator
 
         print('Approximation number {0} of continued fractions:'.format(i+1))
@@ -174,11 +230,11 @@ def get_factors(x_value,t_upper,N,a):
 
         exponential = 0
 
-        if den<1000:
+        if den<1000: # Nota_David: esto con el limit_denominator no debería hacer falta
             exponential=pow(a , (den/2))
         
         """ Check if the value is too big or not """
-        if math.isinf(exponential)==1 or exponential>1000000000:
+        if math.isinf(exponential)==1 or exponential>1000000000: # Nota_David: esto con el limit_denominator no debería hacer falta
             print('Denominator of continued fraction is too big!\n')
             aux_out = input('Input number 1 if you want to continue searching, other if you do not: ')
             if aux_out != '1':
@@ -224,15 +280,36 @@ def egcd(a, b):
     else:
         g, y, x = egcd(b % a, a)
         return (g, x - (b // a) * y, y)
+
 def modinv(a, m):
+    '''
+    Nota_David: esta función da el inverso multiplicativo de "a" con modulo "m" 
+    (modular multiplicative inverse), es decir, aquel número "x" tal que "ax mod(m) = 1".
+
+    El inverso multiplicativo solo exite si "a" y "m" son coprimos.
+
+    Está sacado de: https://stackoverflow.com/questions/4798654/modular-multiplicative-inverse-function-in-python
+    Según ese enlace, tambien se puede usar pow(a, -1, m) en python 3.8+
+
+    '''
     g, x, y = egcd(a, m)
     if g != 1:
         raise Exception('modular inverse does not exist')
     else:
         return x % m
 
+
+''' 
+Nota_David: tenemos la QFT de qiskit (qiskit.circuit.library.QFT()) que tambien 
+admite una versión aproximada usando el parámetro "approximation_degree". 
+Ver https://qiskit.org/documentation/stubs/qiskit.circuit.library.QFT.html?highlight=qft#qiskit.circuit.library.QFT
+'''
+
 """ Function to create QFT """
 def create_QFT(circuit,up_reg,n,with_swaps):
+    ''' 
+    Nota_David: en principio, se sustituye por "qiskit.circuit.library.QFT()"
+    '''
     i=n-1
     """ Apply the H gates and Cphases"""
     """ The Cphases with |angle| < threshold are not created because they do 
@@ -257,6 +334,10 @@ def create_QFT(circuit,up_reg,n,with_swaps):
 
 """ Function to create inverse QFT """
 def create_inverse_QFT(circuit,up_reg,n,with_swaps):
+    '''
+    Nota_David: en principio, se sustituye por "qiskit.circuit.library.QFT(inverse = True)"
+    '''
+
     """ If specified, apply the Swaps at the beggining"""
     if with_swaps==1:
         i=0
@@ -283,6 +364,9 @@ def create_inverse_QFT(circuit,up_reg,n,with_swaps):
 
 """Function that calculates the array of angles to be used in the addition in Fourier Space"""
 def getAngles(a,N):
+    '''
+    Nota_David: No la miré con demasiado detalle pero parece que está bien.
+    '''
     s=bin(int(a))[2:].zfill(N) 
     angles=np.zeros([N])
     for i in range(0, N):
@@ -294,6 +378,7 @@ def getAngles(a,N):
 
 """Creation of a doubly controlled phase gate"""
 def ccphase(circuit,angle,ctl1,ctl2,tgt):
+    ''' Nota_David: Esto es para la ccphiADD() '''
     circuit.cu1(angle/2,ctl1,tgt)
     circuit.cx(ctl2,ctl1)
     circuit.cu1(-angle/2,ctl1,tgt)
@@ -321,6 +406,10 @@ def cphiADD(circuit,q,ctl,a,n,inv):
 
 """Doubly controlled version of the phiADD circuit"""      
 def ccphiADD(circuit,q,ctl1,ctl2,a,n,inv):
+    '''
+    Nota_David: En vez de los if se puede poner "inv" como bool y
+      poner (-1)**inv
+    '''
     angle=getAngles(a,n)
     for i in range(0,n):
         if inv==0:
@@ -505,7 +594,7 @@ if __name__ == '__main__':
         print('In decimal, x_final value for this result is: {0}\n'.format(x_value))
 
         """ Get the factors using the x value obtained """   
-        success=get_factors(int(x_value),int(2*n),int(N),int(a))
+        success=get_factors(int(x_value),int(2*n),int(N),int(a))  # Nota_David: inecesarios los int
         
         if success==True:
             prob_success = prob_success + prob_this_result
